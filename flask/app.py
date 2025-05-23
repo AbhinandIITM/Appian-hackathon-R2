@@ -1,33 +1,30 @@
-from flask import Flask, render_template, request, url_for
+from flask import Flask, render_template, request, url_for, redirect, session, send_file, abort
 from werkzeug.utils import secure_filename
 import os
-import re
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 import torch
 from transformers import AutoProcessor, AutoModelForImageTextToText
 from utils.Matcher import Matcher
 
-
-# # Load the model and processor
-# model_id = "google/paligemma-3b-mix-224"
-# processor = AutoProcessor.from_pretrained(model_id, use_fast=True)
-# model = AutoModelForImageTextToText.from_pretrained(
-#     model_id,
-#     torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
-# ).to("cuda" if torch.cuda.is_available() else "cpu").eval()
-
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['PROCESSED_FOLDER'] = 'static/processed'
+app.secret_key = 'secretkey11'
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
 
+model_id = "google/paligemma-3b-mix-224"
+processor = AutoProcessor.from_pretrained(model_id, use_fast=True)
+model = AutoModelForImageTextToText.from_pretrained(
+    model_id,
+    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
+).to("cuda" if torch.cuda.is_available() else "cpu").eval()
 
+matcher = Matcher()
 def process_image(image_path, output_path):
     image = Image.open(image_path).convert("RGB")
-    # Add <image> token prefix per model requirement
-    prompt = "<image> detect sofa\n"
+    prompt = "<image> detect sofa ; table ; tv\n"
 
     inputs = processor(images=image, text=prompt, return_tensors="pt").to(model.device)
     input_len = inputs["input_ids"].shape[-1]
@@ -39,8 +36,8 @@ def process_image(image_path, output_path):
     result = processor.decode(outputs, skip_special_tokens=True)
     print(f"Model detection output: {result}")
 
-    matcher.process_bbox(image_path, result,output_path)
-
+    similar_results = matcher.process_bbox(image_path, result, output_path)
+    return similar_results
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -58,20 +55,38 @@ def home():
 
             processed_filename = f"processed_{filename}"
             processed_path = os.path.join(app.config['PROCESSED_FOLDER'], processed_filename)
-
-            process_image(original_path, processed_path)
             processed_url = url_for('static', filename=f'processed/{processed_filename}')
 
-    return render_template('home.html', original_url=original_url, processed_url=processed_url)
-if __name__ == '__main__':
-    # Load model only when script is executed directly (not on import or reload)
-    model_id = "google/paligemma-3b-mix-224"
-    processor = AutoProcessor.from_pretrained(model_id, use_fast=True)
-    model = AutoModelForImageTextToText.from_pretrained(
-        model_id,
-        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
-    ).to("cuda" if torch.cuda.is_available() else "cpu").eval()
-    matcher = Matcher()
-    
+            results = process_image(original_path, processed_path)
 
-    app.run(debug=True, use_reloader=False)  # disables auto-reloader that causes double load
+            # ✅ Clean image paths for rendering
+            for result in results:
+                result['topk_paths'] = [os.path.basename(path) for path in result['topk_paths']]
+
+            session['results'] = results
+            session['processed_url'] = processed_url
+            return redirect(url_for('results'))
+
+    return render_template('home.html', original_url=original_url, processed_url=processed_url)
+
+
+@app.route('/images/<label>/<filename>')
+def serve_image(label, filename):
+    image_path = os.path.join('dataset', 'images', 'classified_images_gemma', label, filename)
+    if os.path.exists(image_path):
+        return send_file(image_path, mimetype='image/jpeg')
+    else:
+        abort(404)
+
+
+@app.route('/results')
+def results():
+    results_data = session.get('results', [])
+    processed_url = session.get('processed_url', None)  # <-- add this
+    return render_template('results.html', results=results_data, processed_url=processed_url)  # <-- include it
+
+
+
+
+if __name__ == '__main__':
+    app.run(debug=True, use_reloader=False)

@@ -1,4 +1,3 @@
-
 from transformers import CLIPProcessor, CLIPModel
 import torch
 from PIL import Image, ImageDraw, ImageFont
@@ -7,17 +6,18 @@ import os
 import numpy as np
 
 class Matcher():
-    def __init__(self):
+    def __init__(self, base_url="/images"):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to('cuda')
+        self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(self.device)
         self.clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-        self.ttf_path = r"fonts/DejaVuSans-Bold.ttf"
-        self.crops_path = r'static/crops'
-        self.npz_path=  r'flask/dataset/types.npz'
-        self.image_npz_path = r'flask/dataset/NPZ'
-        self.images_path = r'flask\dataset\images\classified_images_gemma'
+        self.ttf_path = os.path.join("fonts", "DejaVuSans-Bold.ttf")
+        self.crops_path = os.path.join("static", "crops")
+        self.npz_path=  os.path.join("dataset", "types.npz")
+        self.image_npz_path = os.path.join("dataset", "NPZ")
+        self.images_path = os.path.join("dataset", "images", "classified_images_gemma")
+        self.base_url = base_url  # Base URL to serve images from Flask
 
-    def find_similar_type(self,label,type_embed_path,threshold):
+    def find_similar_type(self, label, type_embed_path, threshold):
         data = np.load(type_embed_path)
         type_embeddings = data['embeddings']
         types = data['types']
@@ -35,7 +35,8 @@ class Matcher():
 
         return types[max_idx] if max_sim >= threshold else ""
 
-    def find_similar_images(self,labels,crops):
+    def find_similar_images(self, labels, crops):
+        results = []
         npzs_path = self.image_npz_path
         for label, crop in zip(labels, crops):
             if label == 'none':
@@ -50,7 +51,6 @@ class Matcher():
             db_embeddings = data['embeddings']
             db_filenames = data['image_names']
 
-
             inputs = self.clip_processor(images=crop, return_tensors="pt").to(self.device)
             with torch.no_grad():
                 crop_emb = self.clip_model.get_image_features(**inputs)
@@ -60,13 +60,20 @@ class Matcher():
             sims = db_embeddings @ crop_emb_np.T  # (N, 1)
             top_k = sims.squeeze().argsort()[-5:][::-1]  # top 5
 
-
-            for i, idx in enumerate(top_k):
+            top_urls = []
+            for idx in top_k:
                 filename = db_filenames[idx]
+                # Construct local path
                 image_path = os.path.join(self.images_path, label, filename)
-                            
+                # Convert to web URL for Flask
+                url_path = f"{self.base_url}/{label}/{filename}".replace("\\", "/")
+                top_urls.append(url_path)
 
-    def process_bbox(self,image_path, bbox_string,processed_path,similarity_threshold=0.9):
+            results.append({'label': label, 'topk_paths': top_urls})
+
+        return results
+
+    def process_bbox(self, image_path, bbox_string, processed_path, similarity_threshold=0.9):
         image = Image.open(image_path).convert("RGB")
         draw = ImageDraw.Draw(image)
         width, height = image.size
@@ -75,9 +82,9 @@ class Matcher():
         matches = re.findall(pattern, bbox_string)
         display_labels = []
         crops = []
+
         for idx, (ymin_str, xmin_str, ymax_str, xmax_str, label) in enumerate(matches):
-          
-            matched_type = self.find_similar_type(label=label, type_embed_path=self.npz_path,threshold= similarity_threshold)
+            matched_type = self.find_similar_type(label=label, type_embed_path=self.npz_path, threshold=similarity_threshold)
             display_label = matched_type if matched_type else 'none'
             display_labels.append(display_label)
             if display_label != 'none':
@@ -86,18 +93,26 @@ class Matcher():
                 ymax = int(ymax_str) / 1000 * height
                 xmax = int(xmax_str) / 1000 * width
 
-           
                 crop = image.crop((xmin, ymin, xmax, ymax))
                 crop_filename = f"{display_label}_{idx+1}.png"
                 crop_path = os.path.join(self.crops_path, crop_filename)
                 os.makedirs(os.path.dirname(crop_path), exist_ok=True)
                 crops.append(crop)
                 crop.save(crop_path)
-                print(os.path.abspath(crop_path))
+                print(f"Saved crop: {os.path.abspath(crop_path)}")
 
                 draw.rectangle([(xmin, ymin), (xmax, ymax)], outline='red', width=2)
                 text_position = (xmin, ymin-25)
                 draw.text(text_position, label, fill='blue', font=font)
 
         image.save(processed_path)
-        self.find_similar_images()
+         # Filter out invalid labels and crops before finding similar images
+        valid_pairs = [(label, crop) for label, crop in zip(display_labels, crops) if label != 'none']
+        if not valid_pairs:
+            return []
+
+        valid_labels, valid_crops = zip(*valid_pairs)
+        final_results = self.find_similar_images(valid_labels, valid_crops)
+        # Get top similar images for each crop with their web URLs
+        final_results = self.find_similar_images(display_labels, crops)
+        return final_results
