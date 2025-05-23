@@ -24,13 +24,10 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
 
 
-
-
-
 def process_image(image_path, output_path):
     image = Image.open(image_path).convert("RGB")
     # Add <image> token prefix per model requirement
-    prompt = "<image> detect chair ; table ; bed ; sofa ; shelf\n"
+    prompt = "<image> detect sofa\n"
 
     inputs = processor(images=image, text=prompt, return_tensors="pt").to(model.device)
     input_len = inputs["input_ids"].shape[-1]

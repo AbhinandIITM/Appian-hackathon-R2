@@ -1,2 +1,21 @@
-# Auto detect text files and perform LF normalization
+# Auto-detect text files and normalize to LF in repo, native in working dir
 * text=auto
+
+# Shell scripts should always use LF (Unix-style)
+*.sh text eol=lf
+
+# Batch scripts should always use CRLF (Windows-style)
+*.bat text eol=crlf
+
+# Force LF for code files (optional, if deploying to Unix)
+*.py  text eol=lf
+*.cpp text eol=lf
+*.js  text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+
+# Binary files should never be modified
+*.png binary
+*.jpg binary
+*.exe binary
+*.pdf binary
