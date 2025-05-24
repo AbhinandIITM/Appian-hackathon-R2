@@ -10,12 +10,12 @@ class Matcher():
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(self.device)
         self.clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-        self.ttf_path = os.path.join("fonts", "DejaVuSans-Bold.ttf")
-        self.crops_path = os.path.join("static", "crops")
-        self.npz_path=  os.path.join("dataset", "types.npz")
-        self.image_npz_path = os.path.join("dataset", "NPZ")
-        self.images_path = os.path.join("dataset", "images", "classified_images_gemma")
-        self.base_url = base_url  # Base URL to serve images from Flask
+        self.ttf_path = "fonts/DejaVuSans-Bold.ttf"
+        self.crops_path = "static/crops"
+        self.npz_path=  "dataset/types.npz"
+        self.image_npz_path = "dataset/NPZ"
+        self.images_path = "dataset/images/classified_images_gemma"
+        self.base_url = base_url  
 
     def find_similar_type(self, label, type_embed_path, threshold):
         data = np.load(type_embed_path)
@@ -106,13 +106,12 @@ class Matcher():
                 draw.text(text_position, label, fill='blue', font=font)
 
         image.save(processed_path)
-         # Filter out invalid labels and crops before finding similar images
+
+        # Filter out invalid labels and crops before finding similar images
         valid_pairs = [(label, crop) for label, crop in zip(display_labels, crops) if label != 'none']
         if not valid_pairs:
             return []
 
         valid_labels, valid_crops = zip(*valid_pairs)
         final_results = self.find_similar_images(valid_labels, valid_crops)
-        # Get top similar images for each crop with their web URLs
-        final_results = self.find_similar_images(display_labels, crops)
         return final_results
