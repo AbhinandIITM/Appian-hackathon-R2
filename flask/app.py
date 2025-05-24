@@ -24,7 +24,7 @@ model = AutoModelForImageTextToText.from_pretrained(
 matcher = Matcher()
 def process_image(image_path, output_path):
     image = Image.open(image_path).convert("RGB")
-    prompt = "<image> detect sofa ; table ; tv\n"
+    prompt = "<image> detect chair ; table ; lamp\n"
 
     inputs = processor(images=image, text=prompt, return_tensors="pt").to(model.device)
     input_len = inputs["input_ids"].shape[-1]
@@ -84,6 +84,14 @@ def results():
     results_data = session.get('results', [])
     processed_url = session.get('processed_url', None)  # <-- add this
     return render_template('results.html', results=results_data, processed_url=processed_url)  # <-- include it
+
+
+from flask import render_template, send_from_directory
+
+@app.route('/view_image/<label>/<filename>')
+def view_image(label, filename):
+    return render_template('view_image.html', label=label, filename=filename)
+
 
 
 

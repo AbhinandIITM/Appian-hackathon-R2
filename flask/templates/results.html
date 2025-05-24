@@ -24,7 +24,10 @@
             <div class="row">
                 {% for path in result.topk_paths %}
                 <div class="col-md-2 col-4 mb-3">
-                    <img src="{{ url_for('serve_image', label=result.label, filename=path) }}" class="img-fluid rounded shadow" alt="{{ result.label }} image" />
+                    <a href="{{ url_for('view_image', label=result.label, filename=path) }}" target="_blank">
+                        <img src="{{ url_for('serve_image', label=result.label, filename=path) }}" class="img-fluid rounded shadow" alt="{{ result.label }} image" />
+                    </a>
+
                 </div>
                 {% endfor %}
             </div>

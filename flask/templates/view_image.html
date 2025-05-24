@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>View Image</title>
+</head>
+<body>
+    <h1>{{ label | capitalize }}e</h1>
+
+    <!-- Main image from the dataset -->
+    <img src="{{ url_for('serve_image', label=label, filename=filename) }}" alt="{{ label }}">
+
+    <!-- Additional image from static folder if filename is 2FAKRVUPTJCM.jpg -->
+    {% if filename == '2FAKRVUPTJCM.jpg' %}
+        <h2>GLB file</h2>
+        <img src="{{ url_for('static', filename='3dqr.jpg') }}" alt="GLB file" style="width: 25%; height: auto;">
+    {% endif %}
+</body>
+</html>
