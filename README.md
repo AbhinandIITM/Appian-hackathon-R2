@@ -30,7 +30,8 @@ Get Furninder up and running with these simple steps:
 
 Start by cloning the Furninder repository to your local machine. Open your terminal or command prompt and run:
 
-git clone https://github.com/yourusername/furninder.gitcd furninder
+git clone https://github.com/AbhinandIITM/Appian-hackathon-R2.git
+cd furninder
 
 ### 3\. Install Dependencies
 
