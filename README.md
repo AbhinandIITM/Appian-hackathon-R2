@@ -67,4 +67,11 @@ Once you've completed the setup, you're ready to launch Furninder!
 
 
 ### Demo 
+## Home page
 <img src="https://github.com/AbhinandIITM/Appian-hackathon-R2/blob/main/home.png" width="500"/>  <br>
+
+## Results
+<img src="https://github.com/AbhinandIITM/Appian-hackathon-R2/blob/main/results1.png" width="500"/>  <br>
+
+
+<img src="https://github.com/AbhinandIITM/Appian-hackathon-R2/blob/main/results2.png" width="500"/>  <br>
