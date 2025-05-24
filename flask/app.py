@@ -24,7 +24,7 @@ model = AutoModelForImageTextToText.from_pretrained(
 matcher = Matcher()
 def process_image(image_path, output_path):
     image = Image.open(image_path).convert("RGB")
-    prompt = "<image> detect chair ; table ; lamp\n"
+    prompt = "<image> detect chair ; table ; sofa \n"
 
     inputs = processor(images=image, text=prompt, return_tensors="pt").to(model.device)
     input_len = inputs["input_ids"].shape[-1]
