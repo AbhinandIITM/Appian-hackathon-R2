@@ -57,9 +57,14 @@ Once you've completed the setup, you're ready to launch Furninder!
 
 **⚠️ Note**: The first time you run the application, it will **download the PaLI-Gemma model weights**. This is a large file and may take some time depending on your internet connection. Please be patient.
 
+
 ⚠️ Disclaimer
 -------------
 
 **Hardware Performance**: The performance of Furninder, particularly inference times, can vary significantly based on your hardware.
 
 **Recommended System**: This model was developed and thoroughly tested on an **NVIDIA RTX 4060**. Systems with lower GPU resources may experience slower processing speeds.
+
+
+### Demo 
+<img src="https://github.com/AbhinandIITM/Appian-hackathon-R2/blob/main/home.png" width="500"/>  <br>
